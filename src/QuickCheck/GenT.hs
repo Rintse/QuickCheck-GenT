@@ -1,4 +1,5 @@
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- |
 -- Most of the code is borrowed from
@@ -50,6 +51,7 @@ import Test.QuickCheck (Arbitrary (..))
 import qualified Test.QuickCheck.Arbitrary as QC
 import qualified Test.QuickCheck.Gen as QC
 import qualified Test.QuickCheck.Random as QC
+import Control.Monad.Reader ( Reader, MonadTrans (lift), ReaderT (runReaderT, ReaderT), MonadReader (local, ask))
 
 newtype GenT m a = GenT {unGenT :: QC.QCGen -> Int -> m a}
 
@@ -68,6 +70,10 @@ instance (Monad m) => Monad (GenT m) where
 
 instance (MonadFail m) => MonadFail (GenT m) where
   fail msg = GenT (\_ _ -> fail msg)
+
+instance MonadReader r m => MonadReader r (GenT m) where
+  ask = lift ask
+  local f m = GenT $ \r n -> local f (unGenT m r n)
 
 instance (Functor m, Monad m) => Applicative (GenT m) where
   pure a = GenT (\_ _ -> return a)
